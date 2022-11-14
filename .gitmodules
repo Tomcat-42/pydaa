@@ -1,0 +1,3 @@
+[submodule "libdaa"]
+	path = libdaa
+	url = git@github.com:Tomcat-42/libdaa.git
