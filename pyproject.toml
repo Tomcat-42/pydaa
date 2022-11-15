@@ -7,16 +7,16 @@ readme = "README.md"
 homepage = "https://github.com/Tomcat-42/daa"
 repository = "https://github.com/Tomcat-42/daa"
 keywords = ["daa", "algorithms", "data structures", "sorting", "searching", "c++", "c++11", "c++ module"]
-# packages = ["./daa/"] # include all the compiled
-# include = ["./daa/"] # include all the compiled
-# exclude = ["./daa/libdaa", "./scripts/compile.py"] # Exclude the compile script and the compiled module
+packages = [
+  { include = "libdaa.so", from = "./daa/" }
+]
+# include = ["./daa/libdaa.so"]
+# exclude = ["./libdaa"]
+build = "build.py"
 
 [tool.poetry.dependencies]
 python = "^3.7"
 
-[tool.poetry.scripts]
-compile = "scripts.compile:main"
-
 [build-system]
-requires = ["setuptools", "wheel", "pybind11", "ninja", "cmake>=3.12"]
+requires = ["setuptools", "wheel", "cmake>=3.12"]
 build-backend = "setuptools.build_meta"

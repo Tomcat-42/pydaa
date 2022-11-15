@@ -1,1 +1,1 @@
-from .daa import *
+import libdaa as daa
