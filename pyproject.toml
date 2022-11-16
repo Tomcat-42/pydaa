@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "daa"
-version = "0.0.5"
+version = "1.0.0"
 description = "A Design and Analysis of Algorithms library"
 authors = ["Pablo <pablohuggem@gmail.com>"]
 readme = "README.md"
@@ -8,15 +8,14 @@ homepage = "https://github.com/Tomcat-42/daa"
 repository = "https://github.com/Tomcat-42/daa"
 keywords = ["daa", "algorithms", "data structures", "sorting", "searching", "c++", "c++11", "c++ module"]
 packages = [
-  { include = "libdaa.so", from = "./daa/" }
+  { include = "daa", format = "sdist" },
 ]
-# include = ["./daa/libdaa.so"]
-# exclude = ["./libdaa"]
+include = ["libdaa", "build.py"]
 build = "build.py"
 
 [tool.poetry.dependencies]
 python = "^3.7"
 
 [build-system]
-requires = ["setuptools", "wheel", "cmake>=3.12"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core", "setuptools", "cmake", "pybind11"]
+build-backend = "poetry.core.masonry.api"
