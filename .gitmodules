@@ -1,6 +1,6 @@
-[submodule "libdaa"]
-	path = libdaa
-	url = git@github.com:Tomcat-42/libdaa.git
 [submodule "pybind11"]
 	path = pybind11
 	url = git@github.com:pybind/pybind11.git
+[submodule "daa"]
+	path = daa
+	url = git@github.com:Tomcat-42/daa.git
