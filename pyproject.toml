@@ -1,21 +1,20 @@
 [tool.poetry]
 name = "daa"
-version = "1.0.0"
+version = "0.0.1"
 description = "A Design and Analysis of Algorithms library"
 authors = ["Pablo <pablohuggem@gmail.com>"]
 readme = "README.md"
 homepage = "https://github.com/Tomcat-42/daa"
 repository = "https://github.com/Tomcat-42/daa"
 keywords = ["daa", "algorithms", "data structures", "sorting", "searching", "c++", "c++11", "c++ module"]
-packages = [
-  { include = "daa", format = "sdist" },
-]
-include = ["libdaa", "build.py"]
 build = "build.py"
+# packages = [
+#     { include = "daa", format = "wheel"},
+# ]
 
 [tool.poetry.dependencies]
 python = "^3.7"
 
 [build-system]
-requires = ["poetry-core", "setuptools", "cmake", "pybind11"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=42", "wheel", "cmake>=3.16", "pybind11-stubgen @ git+https://github.com/HaarigerHarald/pybind11-stubgen#egg=pybind11-stubgen"]
+build-backend = "setuptools.build_meta"

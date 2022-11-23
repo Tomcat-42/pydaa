@@ -1,194 +1,162 @@
-"""
-Adapted from https://github.com/pybind/cmake_example
-"""
-import fileinput
+# -*- coding: utf-8 -*-
 import os
-import platform
 import re
 import subprocess
 import sys
-import sysconfig
-from distutils.version import LooseVersion
-from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
+from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
-from setuptools.extension import Extension
 
 
 class CMakeExtension(Extension):
 
-    def __init__(
-            self,
-            name: str,
-            target: str,
-            install_prefix: str,
-            disable_editable: bool = False,
-            cmake_configure_options: List[str] = (),
-            source_dir: str = str(Path(".").absolute()),
-            cmake_build_type: str = "Release",
-            cmake_component: str = None,
-            cmake_depends_on: List[str] = (),
-    ) -> None:
-        """
-        Custom setuptools extension that configures a CMake project.
-        Args:
-            name: The name of the extension.
-            install_prefix: The path relative to the site-package directory where the CMake
-                project is installed (typically the name of the Python package).
-            disable_editable: Skip this extension in editable mode.
-            source_dir: The location of the main CMakeLists.txt.
-            cmake_build_type: The default build type of the CMake project.
-            cmake_component: The name of component to install. Defaults to all
-                components.
-            cmake_depends_on: List of dependency packages containing required CMake projects.
-        """
-
-        super().__init__(name=name, sources=[])
-
-        if not Path(source_dir).is_absolute():
-            source_dir = str(Path(".").absolute() / source_dir)
-
-        if not Path(source_dir).absolute().is_dir():
-            raise ValueError(f"Directory '{source_dir}' does not exist")
-
-        self.install_prefix = install_prefix
-        self.target = target
-        self.cmake_build_type = cmake_build_type
-        self.disable_editable = disable_editable
-        self.cmake_depends_on = cmake_depends_on
-        self.source_dir = str(Path(source_dir).absolute())
-        self.cmake_configure_options = cmake_configure_options
-        self.cmake_component = cmake_component
+    def __init__(self, name, sourcedir=""):
+        Extension.__init__(self, name, sources=[])
+        self.sourcedir = os.path.abspath(sourcedir)
 
 
-class ExtensionBuilder(build_ext):
+class CMakeBuild(build_ext):
 
-    def run(self) -> None:
-        self.validate_cmake()
-        super().run()
+    def build_extension(self, ext):
+        extdir = os.path.abspath(
+            os.path.dirname(self.get_ext_fullpath(ext.name)))
 
-    def build_extension(self, ext: Extension) -> None:
-        if isinstance(ext, CMakeExtension):
-            self.build_cmake_extension(ext)
-        else:
-            super().build_extension(ext)
+        # required for auto-detection of auxiliary "native" libs
+        if not extdir.endswith(os.path.sep):
+            extdir += os.path.sep
 
-    def validate_cmake(self) -> None:
-        cmake_extensions = [
-            x for x in self.extensions if isinstance(x, CMakeExtension)
-        ]
-        if len(cmake_extensions) > 0:
-            try:
-                out = subprocess.check_output(["cmake", "--version"])
-            except OSError:
-                raise RuntimeError(
-                    "CMake must be installed to build the following extensions: "
-                    + ", ".join(e.name for e in cmake_extensions))
-            if platform.system() == "Windows":
-                cmake_version = LooseVersion(
-                    re.search(r"version\s*([\d.]+)",
-                              out.decode()).group(1))  # type: ignore
-                if cmake_version < "3.1.0":
-                    raise RuntimeError("CMake >= 3.1.0 is required on Windows")
+        cfg = "Debug" if self.debug else "Release"
 
-    def build_cmake_extension(self, ext: CMakeExtension) -> None:
-        ext_dir = Path(self.get_ext_fullpath(ext.name)).parent.absolute()
-        cmake_install_prefix = ext_dir / ext.install_prefix
-        target = ext.target
+        # CMake lets you override the generator - we need to check this.
+        # Can be set with Conda-Build, for example.
+        cmake_generator = os.environ.get("CMAKE_GENERATOR", "")
 
-        configure_args = [
-            f"-DCMAKE_BUILD_TYPE={ext.cmake_build_type}",
-            f"-DCMAKE_INSTALL_PREFIX:PATH={cmake_install_prefix}",
-            f"-DCMAKE_INSTALL_LIBDIR={cmake_install_prefix}",
+        cmake_args = [
+            "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={}".format(extdir),
+            "-DPYTHON_EXECUTABLE={}".format(sys.executable),
+            "-DCMAKE_BUILD_TYPE={}".format(cfg),
         ]
 
-        # Extend configure arguments with those from the extension
-        configure_args += ext.cmake_configure_options
+        if "CMAKE_ARGS" in os.environ:
+            cmake_args += [
+                item for item in os.environ["CMAKE_ARGS"].split(" ") if item
+            ]
 
-        # Set build arguments
-        build_args = ["--config", ext.cmake_build_type, "--target", target]
+        build_args = []
 
-        # Set install arguments
-
-        if platform.system() == "Windows":
-            if sys.maxsize > 2**32:
-                configure_args += ["-A", "x64"]
-            build_args += ["--", "/m"]
+        if self.compiler.compiler_type != "msvc":
+            if not cmake_generator:
+                cmake_args += ["-GNinja"]
         else:
-            build_args += ["--", "-j4"]
-        """
-        env = os.environ.copy()
-        env["CXXFLAGS"] = '{} -DVERSION_INFO=\\"{}\\"'.format(
-            env.get("CXXFLAGS", ""), self.distribution.get_version()
+            cmake_args += [
+                "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY_{}={}".format(
+                    cfg.upper(), extdir)
+            ]
+            build_args += ["--config", cfg]
+
+        if sys.platform.startswith("darwin"):
+            # Cross-compile support for macOS - respect ARCHFLAGS if set
+            archs = re.findall(r"-arch (\S+)", os.environ.get("ARCHFLAGS", ""))
+            if archs:
+                cmake_args += [
+                    "-DCMAKE_OSX_ARCHITECTURES={}".format(";".join(archs))
+                ]
+
+        # Set CMAKE_BUILD_PARALLEL_LEVEL to control the parallel build level
+        # across all generators.
+        if "CMAKE_BUILD_PARALLEL_LEVEL" not in os.environ:
+            # self.parallel is a Python 3 only way to set parallel jobs by hand
+            # using -j in the build_ext call, not supported by pip or PyPA-build.
+            if hasattr(self, "parallel") and self.parallel:
+                # CMake 3.12+ only.
+                build_args += ["-j{}".format(self.parallel)]
+
+        if not os.path.exists(self.build_temp):
+            os.makedirs(self.build_temp)
+
+        subprocess.check_call(["cmake", ext.sourcedir] + cmake_args,
+                              cwd=self.build_temp)
+        subprocess.check_call(["cmake", "--build", "."] + build_args,
+                              cwd=self.build_temp)
+
+        # Automatically generate stubs
+        subprocess.check_call(
+            [
+                sys.executable,
+                "doc/generate_stubs.py",
+                ext.name,
+                os.path.realpath(self.get_ext_fullpath(ext.name)),
+            ],
+            cwd=os.path.dirname(os.path.abspath(__file__)),
         )
-        """
-
-        # Get the absolute path to the build folder
-        build_folder = str(
-            Path(".").absolute() / f"{self.build_temp}_{ext.name}")
-
-        # Make sure the build folder exists
-        Path(build_folder).mkdir(exist_ok=True, parents=True)
-        print(f"CMake build folder: {build_folder}")
-
-        configure_command = [
-            "cmake",
-            "-S",
-            ext.source_dir,
-            "-B",
-            build_folder,
-        ] + configure_args
 
 
-        build_command = ["cmake", "--build", build_folder] + build_args
+with open("README.md", "r") as readme:
+    long_desc = readme.read()
 
-        install_command = ["cmake", "--install", build_folder]
-        if ext.cmake_component is not None:
-            install_command.extend(["--component", ext.cmake_component])
+# Amalgamate 3rd party licenses
+with open("pybind11/LICENSE", "r") as license_file:
+    licenses = license_file.read()
 
-        print(f"$ {' '.join(configure_command)}")
-        print(f"$ {' '.join(build_command)}")
-        print(f"$ {' '.join(install_command)}")
+if os.path.isfile("EXTRA_LICENSES"):
+    with open("EXTRA_LICENSES", "r") as license_file:
+        licenses += "\n\n\n" + license_file.read()
 
-        # Generate the project
-        subprocess.check_call(configure_command)
-        # Build the project
-        subprocess.check_call(build_command)
-        # Install the project
-        subprocess.check_call(install_command)
+with open("LICENSE-3RD-PARTY", "w") as license_file:
+    license_file.write(licenses)
 
-    def copy_extensions_to_source(self):
-        original_extensions = list(self.extensions)
-        self.extensions = [
-            ext for ext in self.extensions
-            if not isinstance(ext, CMakeExtension) or not ext.disable_editable
-        ]
-        super().copy_extensions_to_source()
-        self.extensions = original_extensions
+setup(
+    name="daa",
+    version="0.1.0",
+    author="Pablo Alessandro Santos Hugen",
+    author_email="pablohuggem@gmail",
+    description="python bindings for the daa library",
+    long_description=long_desc,
+    long_description_content_type="text/markdown",
+    url="https://github.com/Tomcat-42/daa",
+    license="Public Domain",
+    python_requires=">=3.5, <4",
+    ext_modules=[CMakeExtension("daa")],
+    cmdclass={"build_ext": CMakeBuild},
+    zip_safe=False,
+)
 
 
 def build(setup_kwargs: Dict[str, Any]) -> None:
-    cython_modules = []
-    curr_path = Path(".").absolute()
-    print(f"Current path: {str(curr_path)}")
-
-    cmake_modules = [
-        CMakeExtension(
-            name="daa",
-            target="daa",
-            source_dir="libdaa",
-            install_prefix="daa",
-            cmake_configure_options=[
-                f"-DPYTHON_EXECUTABLE={Path(sys.executable)}",
-                f"-DONLY_PYTHON=ON",
-            ],
-        ),
-    ]
-    ext_modules = cython_modules + cmake_modules
 
     setup_kwargs.update({
-        "ext_modules": ext_modules,
-        "cmdclass": dict(build_ext=ExtensionBuilder),
+        "zip_safe": False,
+        "name": "daa",
+        "version": "0.1.0",
+        "author": "Pablo Alessandro Santos Hugen",
+        "author_email": "pablohuggem@gmail",
+        "description": "python bindings for the daa library",
+        "long_description": long_desc,
+        "long_description_content_type": "text/markdown",
+        "url": "https://github.com/Tomcat-42/daa",
+        "license": "Public Domain",
+        "python_requires": ">:3.5, <4",
+        "ext_modules": [CMakeExtension("daa")],
+        "cmdclass": {
+            "build_ext": CMakeBuild
+        },
         "zip_safe": False,
     })
+
+
+setup(
+    name="daa",
+    version="0.1.0",
+    author="Pablo Alessandro Santos Hugen",
+    author_email="pablohuggem@gmail",
+    description="python bindings for the daa library",
+    long_description=long_desc,
+    long_description_content_type="text/markdown",
+    url="https://github.com/Tomcat-42/daa",
+    license="Public Domain",
+    python_requires=">=3.5, <4",
+    ext_modules=[CMakeExtension("daa")],
+    cmdclass={"build_ext": CMakeBuild},
+    zip_safe=False,
+)

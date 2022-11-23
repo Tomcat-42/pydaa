@@ -1,0 +1,6 @@
+setuptools>=42
+wheel
+cmake
+ninja
+pybind11
+pybind11-stubgen
