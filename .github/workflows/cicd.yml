@@ -16,4 +16,4 @@ jobs:
       - name: Build
         run: ${PWD}/scripts/build.sh
       - name: Publish
-        run: ${PWD}/scripts/publish
+        run: ${PWD}/scripts/publish.sh
