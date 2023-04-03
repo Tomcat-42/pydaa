@@ -27,6 +27,3 @@ for PLAT in "${PLATS[@]}"; do
     echo "Building wheels for $PLAT..."
     docker run --rm -v "$PWD":/io "$MANYLINUX_IMAGE" /io/scripts/build-wheels.sh
 done
-
-echo "Publishing wheels to PyPI..."
-twine upload dist/* -u "$PYPI_USERNAME" -p "$PYPI_PASSWORD"
