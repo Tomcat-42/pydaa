@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # bump version
-./scripts/bump_version.sh
+./scripts/bump_version.sh setup.py pyproject.toml
 
 # Get current version
 VERSION=$(grep version <setup.py | cut -d '"' -f 2)
