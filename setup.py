@@ -107,7 +107,7 @@ with open("LICENSE-3RD-PARTY", "w") as license_file:
 
 setup(
     name="pydaa",
-    version="1.4.8",
+    version="1.4.9",
     author="Pablo Alessandro Santos Hugen",
     author_email="pablohuggem@gmail.com",
     description="python bindings for the daa library",
