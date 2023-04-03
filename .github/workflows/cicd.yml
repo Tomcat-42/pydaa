@@ -1,8 +1,8 @@
 name: CI/CD
 on:
   push:
-    tags:
-      - "v*.*.*"
+    branches:
+      - main
 permissions:
   contents: write
   discussions: write
@@ -11,8 +11,20 @@ jobs:
     runs-on: ubuntu-latest
     name: Build, test and deploy
     steps:
-      - name: Check out this repository
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.CI_TOKEN }}
+          submodules: true
+      - name: Git Submodule Update
+        run: |
+          git pull --recurse-submodules
+          git submodule update --remote --recursive
+      - name: Bump version and push tag
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          ./scripts/commit.sh
       - name: Build
         run: ${PWD}/scripts/build.sh
       - name: Publish
