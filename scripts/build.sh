@@ -6,7 +6,7 @@ MANYLINUX_URL="quay.io/pypa"
 
 # update all git submodules
 echo "Updating git submodules..."
-git submodule update --init --recursive
+git submodule update --init --recursive --remote
 
 # clean up previous builds
 echo "Cleaning up previous builds..."
