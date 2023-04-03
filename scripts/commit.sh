@@ -10,3 +10,4 @@ VERSION=$(grep version <setup.py | cut -d '"' -f 2)
 git commit -am "Bump version to $VERSION"
 git tag "$VERSION"
 git push --tags
+git push
