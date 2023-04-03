@@ -28,6 +28,5 @@ for PLAT in "${PLATS[@]}"; do
     docker run --rm -v "$PWD":/io "$MANYLINUX_IMAGE" /io/scripts/build-wheels.sh
 done
 
-# publish the wheels to PyPI
 echo "Publishing wheels to PyPI..."
-poetry publish
+twine upload dist/* -u "$PYPI_USERNAME" -p "$PYPI_PASSWORD"
