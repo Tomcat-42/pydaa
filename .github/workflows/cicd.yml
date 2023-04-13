@@ -30,5 +30,7 @@ jobs:
         run: echo ${{ secrets.PYPI_USERNAME }}
       - name: Install twine
         run: pip install twine
+      - name: ls
+        run: ls
       - name: Publish
         run: twine upload dist/* -u ${{ secrets.PYPI_USER }} -p ${{ secrets.PYPI_PASSWORD }}
