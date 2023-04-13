@@ -24,8 +24,8 @@ jobs:
       #     git config --global user.email "github-actions[bot]@users.noreply.github.com"
       #     git config --global user.name "github-actions[bot]"
       #     ./scripts/commit.sh
-      # - name: Build
-      #   run: ${PWD}/scripts/build.sh
+      - name: Build
+        run: ${PWD}/scripts/build.sh
       - name: Test
         run: echo ${{ secrets.PYPI_USERNAME }}
       - name: Install twine
