@@ -31,4 +31,4 @@ jobs:
       - name: Install twine
         run: pip install twine
       - name: Publish
-        run: ${PWD}/scripts/publish.sh
+        run: ./scripts/publish.sh
