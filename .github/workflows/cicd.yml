@@ -19,18 +19,14 @@ jobs:
         run: |
           git pull --recurse-submodules
           git submodule update --remote --recursive
-      # - name: Bump version and push tag
-      #   run: |
-      #     git config --global user.email "github-actions[bot]@users.noreply.github.com"
-      #     git config --global user.name "github-actions[bot]"
-      #     ./scripts/commit.sh
+      - name: Bump version and push tag
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          ./scripts/commit.sh
       - name: Build
         run: ${PWD}/scripts/build.sh
-      - name: Test
-        run: echo ${{ secrets.PYPI_USERNAME }}
       - name: Install twine
         run: pip install twine
-      - name: ls
-        run: ls
       - name: Publish
         run: twine upload dist/* -u ${{ secrets.PYPI_USER }} -p ${{ secrets.PYPI_PASSWORD }}
