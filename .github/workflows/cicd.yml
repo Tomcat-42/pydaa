@@ -1,5 +1,7 @@
 name: CI/CD
 on:
+  repository_dispatch:
+    types: [test-passed]
   push:
     branches:
       - main
