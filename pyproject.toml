@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pydaa"
-version="1.6.3"
+version="1.6.4"
 description = "A Design and Analysis of Algorithms library"
 authors = ["Pablo <pablohuggem@gmail.com>"]
 readme = "README.md"
